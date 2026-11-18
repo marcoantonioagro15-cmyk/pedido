@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Sugestão de Pedido</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { width: 100%; max-width: 100%; overflow-x: hidden; margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
+    body { padding: 12px; }
+    .container { max-width: 900px; margin: 0 auto; background: #ffffff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; }
+    .topo { background: #1b365d; color: #ffffff; padding: 16px 20px; }
+    .topo h1 { margin: 0; font-size: 19px; letter-spacing: 0.3px; }
+    .topo p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
+    .cabecalho { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px 14px; padding: 14px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 13px; line-height: 1.4; }
+    .cabecalho div strong { color: #1b365d; }
+    .aviso { background: #eff6ff; color: #1e40af; padding: 10px 20px; font-size: 13px; border-bottom: 1px solid #dbeafe; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; }
+    .validade-tag { background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; }
+    .tabela-wrap { width: 100%; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th { background: #1b365d; color: #ffffff; padding: 11px 8px; text-align: left; font-size: 12px; letter-spacing: 0.4px; }
+    td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    .col-num { text-align: center; width: 42px; }
+    .col-foto { text-align: center; width: 68px; }
+    .col-qtd { text-align: center; width: 136px; }
+    .col-preco { text-align: right; white-space: nowrap; width: 100px; }
+    .col-sub { text-align: right; font-weight: bold; white-space: nowrap; width: 110px; color: #1b365d; }
+    .prod-img { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; border: 1px solid #e2e8f0; background: #ffffff; display: block; margin: 0 auto; }
+    .sem-img { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1; margin: 0 auto; font-size: 10px; padding: 2px; }
+    .preco-mobile, .sub-label-mobile { display: none; }
+    .qtd-box { display: inline-flex; align-items: center; gap: 5px; }
+    .btn-qtd { width: 32px; height: 32px; border: 1px solid #94a3b8; background: #e2e8f0; color: #0f172a; border-radius: 6px; font-weight: bold; font-size: 18px; line-height: 1; cursor: pointer; touch-action: manipulation; }
+    .btn-qtd:active { background: #cbd5e1; }
+    .campo-qtd { width: 52px; height: 32px; text-align: center; font-weight: bold; font-size: 15px; border: 1px solid #94a3b8; border-radius: 6px; background: #ffffff; }
+    .status-ok { display: none; background: #dcfce7; color: #166534; padding: 12px 20px; font-size: 14px; font-weight: bold; border-top: 1px solid #bbf7d0; }
+    .rodape { padding: 16px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+    .total-geral { font-size: 18px; font-weight: bold; color: #1b365d; }
+    .acoes { display: flex; flex-wrap: wrap; gap: 10px; }
+    .btn-acao { padding: 12px 18px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; touch-action: manipulation; }
+    .btn-confirmar { background: #1b365d; color: #ffffff; }
+    .btn-confirmar:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-whats { background: #16a34a; color: #ffffff; }
+
+    .tela-estado { max-width: 460px; margin: 40px auto; background: #ffffff; border-radius: 12px; padding: 30px 22px; text-align: center; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+    .tela-expirada { border-top: 5px solid #dc2626; }
+    .tela-expirada h2 { margin: 0 0 10px; color: #991b1b; font-size: 20px; }
+    .detalhe-exp { background: #fef2f2; color: #991b1b; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; margin: 12px 0; }
+    .spinner { width: 38px; height: 38px; border: 4px solid #cbd5e1; border-top-color: #1b365d; border-radius: 50%; animation: girar 0.8s linear infinite; margin: 0 auto 14px; }
+    @keyframes girar { to { transform: rotate(360deg); } }
+
+    @media (max-width: 680px) {
+      body { padding: 6px; background: #e2e8f0; }
+      .container { border-radius: 8px; overflow: visible; }
+      .topo { padding: 14px; border-radius: 8px 8px 0 0; }
+      .topo h1 { font-size: 17px; }
+      .topo p { font-size: 12px; }
+      .cabecalho { grid-template-columns: 1fr; gap: 5px; padding: 12px 14px; font-size: 12.5px; }
+      .aviso { padding: 9px 14px; font-size: 12.5px; }
+      .tabela-wrap { padding: 10px; background: #f1f5f9; }
+      table, tbody { display: block; width: 100%; }
+      thead { display: none; }
+      tbody tr {
+        display: grid;
+        grid-template-columns: 68px 1fr auto;
+        grid-template-areas: "foto prod num" "foto qtd sub";
+        gap: 10px;
+        align-items: center;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+      tbody tr:last-child { margin-bottom: 0; }
+      td { display: block; padding: 0; border: none; width: auto !important; }
+      .col-num { grid-area: num; align-self: start; text-align: right; }
+      .badge-num { display: inline-block; background: #e2e8f0; color: #1b365d; font-size: 11px; font-weight: bold; padding: 2px 7px; border-radius: 10px; }
+      .col-foto { grid-area: foto; text-align: center; }
+      .prod-img, .sem-img { width: 66px; height: 66px; }
+      .col-prod { grid-area: prod; text-align: left; }
+      .prod-nome { font-size: 13.5px; font-weight: bold; color: #0f172a; line-height: 1.3; word-break: break-word; }
+      .preco-mobile { display: block; margin-top: 4px; font-size: 12.5px; color: #475569; }
+      .col-preco { display: none; }
+      .col-qtd { grid-area: qtd; text-align: left; }
+      .btn-qtd { width: 38px; height: 38px; font-size: 20px; border-radius: 8px; }
+      .campo-qtd { width: 50px; height: 38px; font-size: 16px; border-radius: 8px; }
+      .col-sub { grid-area: sub; text-align: right; }
+      .sub-label-mobile { display: block; font-size: 11px; font-weight: normal; color: #64748b; }
+      .subtotal { font-size: 14.5px; color: #1b365d; }
+      .rodape { position: sticky; bottom: 0; z-index: 30; flex-direction: column; align-items: stretch; padding: 12px 14px; background: #ffffff; border-top: 2px solid #cbd5e1; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); border-radius: 0 0 8px 8px; gap: 10px; }
+      .total-geral { display: flex; justify-content: space-between; align-items: center; font-size: 17px; }
+      .acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+      .btn-acao { width: 100%; padding: 13px 8px; font-size: 13.5px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div id="tela-carregando" class="tela-estado">
+    <div class="spinner"></div>
+    <strong>Carregando sugestão de pedido...</strong>
+  </div>
+
+  <div id="tela-erro" class="tela-estado" style="display:none;"></div>
+
+  <div id="app-pedido" class="container" style="display:none;">
+    <div class="topo">
+      <h1>SUGESTÃO DE PEDIDO</h1>
+      <p>Ajuste as quantidades abaixo e finalize seu pedido.</p>
+    </div>
+    <div class="cabecalho">
+      <div><strong>CLIENTE:</strong> <span id="info-cliente"></span></div>
+      <div><strong>CNPJ:</strong> <span id="info-cnpj"></span></div>
+      <div><strong>DATA:</strong> <span id="info-data"></span></div>
+      <div><strong>FORMA DE PAG.:</strong> <span id="info-pag"></span></div>
+      <div><strong>PRAZO:</strong> <span id="info-prazo"></span></div>
+    </div>
+    <div class="aviso">
+      <span>Altere apenas a quantidade (<strong>QTD</strong>). Os valores são calculados automaticamente.</span>
+      <span id="info-validade" class="validade-tag"></span>
+    </div>
+    <div class="tabela-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="col-num">#</th>
+            <th class="col-foto">FOTO</th>
+            <th>PRODUTO / DESCRIÇÃO</th>
+            <th class="col-qtd">QTD</th>
+            <th class="col-preco">PREÇO</th>
+            <th class="col-sub">SUBTOTAL</th>
+          </tr>
+        </thead>
+        <tbody id="lista-itens"></tbody>
+      </table>
+    </div>
+    <div id="msg-sucesso" class="status-ok">Pedido confirmado e registrado com sucesso! Você também pode enviar o resumo no WhatsApp abaixo.</div>
+    <div class="rodape">
+      <div class="total-geral"><span>VALOR TOTAL:</span> <span id="valor-total">R$ 0,00</span></div>
+      <div class="acoes">
+        <button type="button" id="btn-confirmar" class="btn-acao btn-confirmar" onclick="confirmarPedido()">Confirmar Pedido</button>
+        <button type="button" class="btn-acao btn-whats" onclick="enviarWhatsApp()">Enviar WhatsApp</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwGk5ARgPyV1P-0QVfdEJtKLoQLkAFpuEzw_GGpBKnH_iEaopjqSlrjQ5xG3_kfjw/exec";
+
+    const params = new URLSearchParams(window.location.search);
+    const FILE_ID = (params.get("id") || "").trim();
+    let DADOS_ORIGINAIS = null;
+
+    function formatarMoeda(v) {
+      return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    }
+
+    function escaparHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function mostrarExpirado(cliente, expiraTexto) {
+      document.getElementById("tela-carregando").style.display = "none";
+      document.getElementById("app-pedido").style.display = "none";
+      const box = document.getElementById("tela-erro");
+      box.className = "tela-estado tela-expirada";
+      box.innerHTML =
+        '<div style="font-size:40px;margin-bottom:10px;">&#9203;</div>' +
+        '<h2>Link de Orçamento Expirado</h2>' +
+        '<p style="color:#475569;font-size:14px;line-height:1.5;">Olá, <strong>' + escaparHtml(cliente || "Cliente") + '</strong>. Este link de sugestão de pedido tinha validade de <strong>24 horas</strong> para garantir preços atualizados.</p>' +
+        '<div class="detalhe-exp">Expirou em: ' + escaparHtml(expiraTexto) + '</div>' +
+        '<p style="color:#475569;font-size:13px;">Por favor, solicite um novo link atualizado ao seu vendedor.</p>';
+      box.style.display = "block";
+    }
+
+    function mostrarErro(msg) {
+      document.getElementById("tela-carregando").style.display = "none";
+      const box = document.getElementById("tela-erro");
+      box.innerHTML = '<h3 style="color:#991b1b;margin:0;">' + escaparHtml(msg) + '</h3>';
+      box.style.display = "block";
+    }
+
+    function mudarQtd(btn, delta) {
+      const input = btn.parentElement.querySelector(".campo-qtd");
+      const atual = parseInt(input.value, 10) || 0;
+      input.value = Math.max(0, atual + delta);
+      atualizarTotais();
+    }
+
+    function atualizarTotais() {
+      let total = 0;
+      document.querySelectorAll("#lista-itens tr").forEach(function (tr) {
+        const input = tr.querySelector(".campo-qtd");
+        const qtd = parseFloat(input.value) || 0;
+        const preco = parseFloat(input.dataset.preco) || 0;
+        const sub = qtd * preco;
+        total += sub;
+        tr.querySelector(".subtotal").textContent = formatarMoeda(sub);
+      });
+      document.getElementById("valor-total").textContent = formatarMoeda(total);
+    }
+
+    function coletarPedidoAtualizado() {
+      const itens = [];
+      let totalGeral = 0;
+      document.querySelectorAll("#lista-itens tr").forEach(function (tr) {
+        const nome = tr.querySelector(".prod-nome").textContent.trim();
+        const input = tr.querySelector(".campo-qtd");
+        const qtd = parseFloat(input.value) || 0;
+        const preco = parseFloat(input.dataset.preco) || 0;
+        const subtotal = qtd * preco;
+        totalGeral += subtotal;
+        itens.push({ produto: nome, qtd: qtd, preco: preco, subtotal: subtotal });
+      });
+      return {
+        fileId: FILE_ID,
+        cliente: DADOS_ORIGINAIS.cliente,
+        cnpj: DADOS_ORIGINAIS.cnpj,
+        dataPedido: DADOS_ORIGINAIS.dataPedido,
+        formaPag: DADOS_ORIGINAIS.formaPag,
+        prazo: DADOS_ORIGINAIS.prazo,
+        totalGeral: totalGeral,
+        itens: itens
+      };
+    }
+
+    function confirmarPedido() {
+      if (Date.now() > DADOS_ORIGINAIS.expiraEm) {
+        mostrarExpirado(DADOS_ORIGINAIS.cliente, DADOS_ORIGINAIS.expiraTexto);
+        return;
+      }
+
+      const btn = document.getElementById("btn-confirmar");
+      btn.disabled = true;
+      btn.textContent = "Enviando...";
+      const pedidoFinal = coletarPedidoAtualizado();
+
+      fetch(API_APPS_SCRIPT, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(pedidoFinal)
+      })
+        .then(function (resp) { return resp.json(); })
+        .then(function (res) {
+          if (res && res.ok) {
+            btn.textContent = "Pedido Confirmado!";
+            btn.style.background = "#16a34a";
+            document.getElementById("msg-sucesso").style.display = "block";
+          } else {
+            throw new Error((res && res.erro) || "Falha ao registrar pedido.");
+          }
+        })
+        .catch(function (err) {
+          alert(err.message);
+          btn.disabled = false;
+          btn.textContent = "Confirmar Pedido";
+        });
+    }
+
+    function enviarWhatsApp() {
+      if (Date.now() > DADOS_ORIGINAIS.expiraEm) {
+        mostrarExpirado(DADOS_ORIGINAIS.cliente, DADOS_ORIGINAIS.expiraTexto);
+        return;
+      }
+
+      const pedido = coletarPedidoAtualizado();
+      let texto = "*PEDIDO CONFIRMADO - " + pedido.cliente + "*\n\n";
+      pedido.itens.forEach(function (item) {
+        if (item.qtd > 0) {
+          texto += "• *" + item.qtd + "x* " + item.produto + " (" + formatarMoeda(item.subtotal) + ")\n";
+        }
+      });
+      texto += "\n*VALOR TOTAL: " + formatarMoeda(pedido.totalGeral) + "*";
+
+      const destino = DADOS_ORIGINAIS.whatsapp || "";
+      const urlWhats = "https://api.whatsapp.com/send?phone=" + destino + "&text=" + encodeURIComponent(texto);
+      window.open(urlWhats, "_blank");
+    }
+
+    function iniciar() {
+      if (!FILE_ID) {
+        mostrarErro("Link inválido ou incompleto. Solicite um novo link ao vendedor.");
+        return;
+      }
+
+      fetch(API_APPS_SCRIPT + "?id=" + encodeURIComponent(FILE_ID))
+        .then(function (resp) { return resp.json(); })
+        .then(function (res) {
+          if (!res.ok) {
+            if (res.expirado) {
+              mostrarExpirado(res.cliente, res.expiraTexto);
+            } else {
+              mostrarErro(res.erro || "Pedido não encontrado.");
+            }
+            return;
+          }
+
+          const p = res.pedido;
+          DADOS_ORIGINAIS = p;
+          document.title = "Sugestão de Pedido - " + p.cliente;
+          document.getElementById("info-cliente").textContent = p.cliente;
+          document.getElementById("info-cnpj").textContent = p.cnpj;
+          document.getElementById("info-data").textContent = p.dataPedido;
+          document.getElementById("info-pag").textContent = p.formaPag;
+          document.getElementById("info-prazo").textContent = p.prazo;
+          document.getElementById("info-validade").textContent = "Válido até " + p.expiraTexto;
+
+          const linhasHtml = p.itens.map(function (item, idx) {
+            const precoFmt = formatarMoeda(item.preco);
+            const numItem = item.numero || (idx + 1);
+            const fotoHtml = item.imagem
+              ? '<img src="' + item.imagem + '" alt="Produto" class="prod-img">'
+              : '<div class="sem-img">Sem foto</div>';
+
+            return (
+              '<tr>' +
+                '<td class="col-num"><span class="badge-num">' + numItem + '</span></td>' +
+                '<td class="col-foto">' + fotoHtml + '</td>' +
+                '<td class="col-prod">' +
+                  '<div class="prod-nome">' + escaparHtml(item.produto) + '</div>' +
+                  '<div class="preco-mobile">Unitário: <strong>' + precoFmt + '</strong></div>' +
+                '</td>' +
+                '<td class="col-qtd">' +
+                  '<div class="qtd-box">' +
+                    '<button type="button" class="btn-qtd" aria-label="Diminuir" onclick="mudarQtd(this, -1)">-</button>' +
+                    '<input type="number" inputmode="numeric" class="campo-qtd" min="0" step="1" value="' + item.qtd + '" data-preco="' + item.preco + '" oninput="atualizarTotais()">' +
+                    '<button type="button" class="btn-qtd" aria-label="Aumentar" onclick="mudarQtd(this, 1)">+</button>' +
+                  '</div>' +
+                '</td>' +
+                '<td class="col-preco">' + precoFmt + '</td>' +
+                '<td class="col-sub">' +
+                  '<span class="sub-label-mobile">Subtotal</span>' +
+                  '<span class="subtotal">R$ 0,00</span>' +
+                '</td>' +
+              '</tr>'
+            );
+          }).join("");
+
+          document.getElementById("lista-itens").innerHTML = linhasHtml;
+          atualizarTotais();
+          document.getElementById("tela-carregando").style.display = "none";
+          document.getElementById("app-pedido").style.display = "block";
+        })
+        .catch(function () {
+          mostrarErro("Não foi possível carregar o pedido. Verifique sua conexão e tente novamente.");
+        });
+    }
+
+    iniciar();
+  </script>
+</body>
+</html>
