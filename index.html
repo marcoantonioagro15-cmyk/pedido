@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { width: 100%; max-width: 100%; overflow-x: hidden; margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f1f5f9; color: #1e293b; }
-    body { padding: 12px; }
+    body { padding: 12px; padding-bottom: 24px; }
     .container { max-width: 900px; margin: 0 auto; background: #ffffff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: hidden; }
     .topo { background: #1b365d; color: #ffffff; padding: 16px 20px; }
     .topo h1 { margin: 0; font-size: 19px; letter-spacing: 0.3px; }
@@ -16,10 +16,96 @@
     .cabecalho div strong { color: #1b365d; }
     .aviso { background: #eff6ff; color: #1e40af; padding: 10px 20px; font-size: 13px; border-bottom: 1px solid #dbeafe; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; }
     .validade-tag { background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-size: 12px; }
+
+    .barra-navegacao {
+      padding: 12px 20px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .caixa-busca {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .icone-lupa {
+      position: absolute;
+      left: 12px;
+      font-size: 15px;
+      pointer-events: none;
+      color: #475569;
+    }
+    .input-busca {
+      width: 100%;
+      padding: 10px 38px 10px 36px;
+      border: 1px solid #94a3b8;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #ffffff;
+      color: #0f172a;
+    }
+    .input-busca:focus {
+      outline: none;
+      border-color: #1b365d;
+      box-shadow: 0 0 0 2px rgba(27, 54, 93, 0.15);
+    }
+    .btn-limpar {
+      position: absolute;
+      right: 8px;
+      border: none;
+      background: #e2e8f0;
+      color: #334155;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+      align-items: center;
+      justify-content: center;
+    }
+    .abas-categorias {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+    }
+    .aba-cat {
+      flex: 0 0 auto;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #1b365d;
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      white-space: nowrap;
+      text-transform: uppercase;
+      transition: all 0.15s ease;
+    }
+    .aba-cat.ativa {
+      background: #1b365d;
+      color: #ffffff;
+      border-color: #1b365d;
+    }
+    .sem-resultado {
+      text-align: center;
+      padding: 24px 16px;
+      color: #64748b;
+      font-size: 14px;
+    }
+
     .tabela-wrap { width: 100%; }
     table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
     th { background: #1b365d; color: #ffffff; padding: 11px 8px; text-align: left; font-size: 12px; letter-spacing: 0.4px; }
     td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+    tbody tr { scroll-margin-top: 16px; }
     .col-num { text-align: center; width: 42px; }
     .col-cat {
       background: #eff6ff;
@@ -66,13 +152,14 @@
     @keyframes girar { to { transform: rotate(360deg); } }
 
     @media (max-width: 680px) {
-      body { padding: 6px; background: #e2e8f0; }
+      body { padding: 6px; padding-bottom: 92px; background: #e2e8f0; }
       .container { border-radius: 8px; overflow: visible; }
       .topo { padding: 14px; border-radius: 8px 8px 0 0; }
       .topo h1 { font-size: 17px; }
       .topo p { font-size: 12px; }
       .cabecalho { grid-template-columns: 1fr; gap: 5px; padding: 12px 14px; font-size: 12.5px; }
       .aviso { padding: 9px 14px; font-size: 12.5px; }
+      .barra-navegacao { padding: 10px 12px; }
       .tabela-wrap { padding: 10px; background: #f1f5f9; }
       table, tbody { display: block; width: 100%; }
       thead { display: none; }
@@ -88,6 +175,7 @@
         padding: 12px;
         margin-bottom: 10px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        scroll-margin-top: 12px;
       }
       tbody tr:last-child { margin-bottom: 0; }
       tr.inicio-grupo td { border-top: none; }
@@ -139,6 +227,20 @@
       <span>Altere apenas a quantidade (<strong>QTD</strong>). Os valores são calculados automaticamente.</span>
       <span id="info-validade" class="validade-tag"></span>
     </div>
+    <div id="barra-navegacao" class="barra-navegacao" style="display:none;">
+      <div class="caixa-busca">
+        <span class="icone-lupa" aria-hidden="true">&#128269;</span>
+        <input
+          type="search"
+          id="campo-busca"
+          class="input-busca"
+          placeholder="Buscar produto, sabor, gramatura ou código..."
+          oninput="aplicarFiltroBusca()"
+        >
+        <button type="button" id="btn-limpar-busca" class="btn-limpar" style="display:none;" aria-label="Limpar busca" onclick="limparBusca()">&#10005;</button>
+      </div>
+      <div id="abas-categorias" class="abas-categorias" role="tablist"></div>
+    </div>
     <div class="tabela-wrap">
       <table>
         <thead>
@@ -153,6 +255,7 @@
         </thead>
         <tbody id="lista-itens"></tbody>
       </table>
+      <div id="sem-resultado" class="sem-resultado" style="display:none;">Nenhum produto encontrado para essa pesquisa.</div>
     </div>
     <div id="msg-sucesso" class="status-ok">Pedido confirmado e registrado com sucesso! Você também pode enviar o resumo no WhatsApp abaixo.</div>
     <div class="rodape">
@@ -170,6 +273,8 @@
     const params = new URLSearchParams(window.location.search);
     const FILE_ID = (params.get("id") || "").trim();
     let DADOS_ORIGINAIS = null;
+    let TEM_CATEGORIAS = false;
+    let QTD_POR_INDICE = {};
 
     function formatarMoeda(v) {
       return Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -181,6 +286,14 @@
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
+    }
+
+    function normalizarTexto(txt) {
+      return String(txt || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
     }
 
     function mostrarExpirado(cliente, expiraTexto) {
@@ -207,19 +320,42 @@
     function mudarQtd(btn, delta) {
       const input = btn.parentElement.querySelector(".campo-qtd");
       const atual = parseInt(input.value, 10) || 0;
-      input.value = Math.max(0, atual + delta);
+      const novaQtd = Math.max(0, atual + delta);
+      input.value = novaQtd;
+      const idx = parseInt(input.dataset.idx, 10);
+      if (!isNaN(idx)) {
+        QTD_POR_INDICE[idx] = novaQtd;
+      }
+      atualizarTotais();
+    }
+
+    function onInputQtd(input) {
+      const idx = parseInt(input.dataset.idx, 10);
+      const qtd = Math.max(0, parseFloat(input.value) || 0);
+      if (!isNaN(idx)) {
+        QTD_POR_INDICE[idx] = qtd;
+      }
       atualizarTotais();
     }
 
     function atualizarTotais() {
       let total = 0;
+      if (DADOS_ORIGINAIS && Array.isArray(DADOS_ORIGINAIS.itens)) {
+        DADOS_ORIGINAIS.itens.forEach(function (item, idx) {
+          const qtd = parseFloat(QTD_POR_INDICE[idx] !== undefined ? QTD_POR_INDICE[idx] : (item.qtd || 0)) || 0;
+          const preco = parseFloat(item.preco) || 0;
+          total += qtd * preco;
+        });
+      }
       document.querySelectorAll("#lista-itens tr").forEach(function (tr) {
         const input = tr.querySelector(".campo-qtd");
+        if (!input) return;
         const qtd = parseFloat(input.value) || 0;
         const preco = parseFloat(input.dataset.preco) || 0;
-        const sub = qtd * preco;
-        total += sub;
-        tr.querySelector(".subtotal").textContent = formatarMoeda(sub);
+        const subEl = tr.querySelector(".subtotal");
+        if (subEl) {
+          subEl.textContent = formatarMoeda(qtd * preco);
+        }
       });
       document.getElementById("valor-total").textContent = formatarMoeda(total);
     }
@@ -227,11 +363,10 @@
     function coletarPedidoAtualizado() {
       const itens = [];
       let totalGeral = 0;
-      document.querySelectorAll("#lista-itens tr").forEach(function (tr) {
-        const nome = tr.querySelector(".prod-nome").textContent.trim();
-        const input = tr.querySelector(".campo-qtd");
-        const qtd = parseFloat(input.value) || 0;
-        const preco = parseFloat(input.dataset.preco) || 0;
+      (DADOS_ORIGINAIS.itens || []).forEach(function (item, idx) {
+        const nome = String(item.produto || item.descricao || "").trim();
+        const qtd = parseFloat(QTD_POR_INDICE[idx] !== undefined ? QTD_POR_INDICE[idx] : (item.qtd || 0)) || 0;
+        const preco = parseFloat(item.preco) || 0;
         const subtotal = qtd * preco;
         totalGeral += subtotal;
         itens.push({ produto: nome, qtd: qtd, preco: preco, subtotal: subtotal });
@@ -301,6 +436,159 @@
       window.open(urlWhats, "_blank");
     }
 
+    function montarAbasCategorias(itens) {
+      const containerAbas = document.getElementById("abas-categorias");
+      const barra = document.getElementById("barra-navegacao");
+      const gruposUnicos = [];
+
+      itens.forEach(function (item) {
+        const g = String(item.grupo || "").trim();
+        if (g && gruposUnicos.indexOf(g) === -1) {
+          gruposUnicos.push(g);
+        }
+      });
+
+      barra.style.display = "flex";
+      if (gruposUnicos.length === 0) {
+        containerAbas.style.display = "none";
+        return;
+      }
+
+      containerAbas.style.display = "flex";
+      let html = '<button type="button" class="aba-cat ativa" onclick="irParaCategoria(\'\', this)">TODAS</button>';
+      gruposUnicos.forEach(function (grupo) {
+        const argSeguro = encodeURIComponent(grupo);
+        html += '<button type="button" class="aba-cat" onclick="irParaCategoria(decodeURIComponent(\'' + argSeguro + '\'), this)">' + escaparHtml(grupo) + '</button>';
+      });
+      containerAbas.innerHTML = html;
+    }
+
+    function irParaCategoria(grupo, botaoClicado) {
+      document.querySelectorAll(".aba-cat").forEach(function (btn) {
+        btn.classList.remove("ativa");
+      });
+      if (botaoClicado) {
+        botaoClicado.classList.add("ativa");
+      }
+
+      if (!grupo) {
+        const topoBarra = document.getElementById("barra-navegacao");
+        window.scrollTo({ top: Math.max(0, topoBarra.offsetTop - 8), behavior: "smooth" });
+        return;
+      }
+
+      const linhas = Array.from(document.querySelectorAll("#lista-itens tr"));
+      const alvo = linhas.find(function (tr) {
+        return tr.dataset.grupo === grupo;
+      });
+      if (alvo) {
+        alvo.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    function renderizarListaItens(termoBusca) {
+      if (!DADOS_ORIGINAIS || !Array.isArray(DADOS_ORIGINAIS.itens)) return;
+      const termoNorm = normalizarTexto(termoBusca);
+
+      const entradasFiltradas = [];
+      DADOS_ORIGINAIS.itens.forEach(function (item, idx) {
+        const nome = String(item.produto || item.descricao || "").trim();
+        const grupo = String(item.grupo || "").trim();
+        const bate = !termoNorm ||
+          normalizarTexto(nome).indexOf(termoNorm) !== -1 ||
+          normalizarTexto(grupo).indexOf(termoNorm) !== -1;
+
+        if (bate) {
+          entradasFiltradas.push({ item: item, idxOriginal: idx, grupo: grupo });
+        }
+      });
+
+      const semResEl = document.getElementById("sem-resultado");
+      if (entradasFiltradas.length === 0) {
+        document.getElementById("lista-itens").innerHTML = "";
+        semResEl.style.display = "block";
+        atualizarTotais();
+        return;
+      }
+      semResEl.style.display = "none";
+
+      const linhasHtml = entradasFiltradas.map(function (entry, pos) {
+        const item = entry.item;
+        const idx = entry.idxOriginal;
+        const grupoAtual = entry.grupo;
+        const qtdAtual = parseFloat(QTD_POR_INDICE[idx] !== undefined ? QTD_POR_INDICE[idx] : (item.qtd || 0)) || 0;
+        const precoUnit = parseFloat(item.preco) || 0;
+        const precoFmt = formatarMoeda(precoUnit);
+        const numItem = item.numero || (idx + 1);
+        const isNovoGrupo = TEM_CATEGORIAS && (pos === 0 || grupoAtual !== entradasFiltradas[pos - 1].grupo);
+
+        const fotoHtml = item.imagem
+          ? '<img src="' + item.imagem + '" alt="Produto" class="prod-img">'
+          : '<div class="sem-img">Sem foto</div>';
+
+        let celulaPrimeiraCol = "";
+        if (TEM_CATEGORIAS) {
+          if (isNovoGrupo) {
+            let qtdLinhasGrupo = 1;
+            while (
+              pos + qtdLinhasGrupo < entradasFiltradas.length &&
+              entradasFiltradas[pos + qtdLinhasGrupo].grupo === grupoAtual
+            ) {
+              qtdLinhasGrupo++;
+            }
+            celulaPrimeiraCol = '<td class="col-cat" rowspan="' + qtdLinhasGrupo + '">' + escaparHtml(grupoAtual) + '</td>';
+          }
+        } else {
+          celulaPrimeiraCol = '<td class="col-num"><span class="badge-num">' + numItem + '</span></td>';
+        }
+
+        const badgeCategoriaMobile = TEM_CATEGORIAS && grupoAtual
+          ? '<div class="badge-cat-mobile">' + escaparHtml(grupoAtual) + '</div>'
+          : '';
+
+        return (
+          '<tr data-grupo="' + escaparHtml(grupoAtual) + '" class="' + (isNovoGrupo ? 'inicio-grupo' : '') + '">' +
+            celulaPrimeiraCol +
+            '<td class="col-foto">' + fotoHtml + '</td>' +
+            '<td class="col-prod">' +
+              badgeCategoriaMobile +
+              '<div class="prod-nome">' + escaparHtml(item.produto || item.descricao || "") + '</div>' +
+              '<div class="preco-mobile">Unitário: <strong>' + precoFmt + '</strong></div>' +
+            '</td>' +
+            '<td class="col-qtd">' +
+              '<div class="qtd-box">' +
+                '<button type="button" class="btn-qtd" aria-label="Diminuir" onclick="mudarQtd(this, -1)">-</button>' +
+                '<input type="number" inputmode="numeric" class="campo-qtd" min="0" step="1" value="' + qtdAtual + '" data-idx="' + idx + '" data-preco="' + precoUnit + '" oninput="onInputQtd(this)">' +
+                '<button type="button" class="btn-qtd" aria-label="Aumentar" onclick="mudarQtd(this, 1)">+</button>' +
+              '</div>' +
+            '</td>' +
+            '<td class="col-preco">' + precoFmt + '</td>' +
+            '<td class="col-sub">' +
+              '<span class="sub-label-mobile">Subtotal</span>' +
+              '<span class="subtotal">' + formatarMoeda(qtdAtual * precoUnit) + '</span>' +
+            '</td>' +
+          '</tr>'
+        );
+      }).join("");
+
+      document.getElementById("lista-itens").innerHTML = linhasHtml;
+      atualizarTotais();
+    }
+
+    function aplicarFiltroBusca() {
+      const campo = document.getElementById("campo-busca");
+      const btnLimpar = document.getElementById("btn-limpar-busca");
+      btnLimpar.style.display = campo.value ? "inline-flex" : "none";
+      renderizarListaItens(campo.value);
+    }
+
+    function limparBusca() {
+      const campo = document.getElementById("campo-busca");
+      campo.value = "";
+      aplicarFiltroBusca();
+      campo.focus();
+    }
+
     function processarDadosPedido(p) {
       if (!p || !Array.isArray(p.itens)) {
         mostrarErro("Pedido não encontrado.");
@@ -313,6 +601,10 @@
       }
 
       DADOS_ORIGINAIS = p;
+      QTD_POR_INDICE = {};
+      p.itens.forEach(function (item, idx) {
+        QTD_POR_INDICE[idx] = Number(item.qtd) || 0;
+      });
 
       const tituloPagina = p.titulo || "SUGESTÃO DE PEDIDO";
       document.getElementById("titulo-topo").textContent = tituloPagina;
@@ -325,12 +617,12 @@
       document.getElementById("info-prazo").textContent = p.prazo || "";
       document.getElementById("info-validade").textContent = p.expiraTexto ? ("Válido até " + p.expiraTexto) : "";
 
-      const temCategorias = p.itens.some(function (item) {
+      TEM_CATEGORIAS = p.itens.some(function (item) {
         return item.grupo && String(item.grupo).trim() !== "";
       });
 
       const thPrimeira = document.getElementById("th-primeira-col");
-      if (temCategorias) {
+      if (TEM_CATEGORIAS) {
         thPrimeira.textContent = "CATEGORIA";
         thPrimeira.className = "col-cat";
       } else {
@@ -338,63 +630,9 @@
         thPrimeira.className = "col-num";
       }
 
-      const linhasHtml = p.itens.map(function (item, idx) {
-        const precoFmt = formatarMoeda(item.preco);
-        const numItem = item.numero || (idx + 1);
-        const grupoAtual = String(item.grupo || "").trim();
-        const isNovoGrupo = temCategorias && (idx === 0 || grupoAtual !== String(p.itens[idx - 1].grupo || "").trim());
+      montarAbasCategorias(p.itens);
+      renderizarListaItens("");
 
-        const fotoHtml = item.imagem
-          ? '<img src="' + item.imagem + '" alt="Produto" class="prod-img">'
-          : '<div class="sem-img">Sem foto</div>';
-
-        let celulaPrimeiraCol = "";
-        if (temCategorias) {
-          if (isNovoGrupo) {
-            let qtdLinhasGrupo = 1;
-            while (
-              idx + qtdLinhasGrupo < p.itens.length &&
-              String(p.itens[idx + qtdLinhasGrupo].grupo || "").trim() === grupoAtual
-            ) {
-              qtdLinhasGrupo++;
-            }
-            celulaPrimeiraCol = '<td class="col-cat" rowspan="' + qtdLinhasGrupo + '">' + escaparHtml(grupoAtual) + '</td>';
-          }
-        } else {
-          celulaPrimeiraCol = '<td class="col-num"><span class="badge-num">' + numItem + '</span></td>';
-        }
-
-        const badgeCategoriaMobile = temCategorias && grupoAtual
-          ? '<div class="badge-cat-mobile">' + escaparHtml(grupoAtual) + '</div>'
-          : '';
-
-        return (
-          '<tr class="' + (isNovoGrupo ? 'inicio-grupo' : '') + '">' +
-            celulaPrimeiraCol +
-            '<td class="col-foto">' + fotoHtml + '</td>' +
-            '<td class="col-prod">' +
-              badgeCategoriaMobile +
-              '<div class="prod-nome">' + escaparHtml(item.produto || item.descricao || "") + '</div>' +
-              '<div class="preco-mobile">Unitário: <strong>' + precoFmt + '</strong></div>' +
-            '</td>' +
-            '<td class="col-qtd">' +
-              '<div class="qtd-box">' +
-                '<button type="button" class="btn-qtd" aria-label="Diminuir" onclick="mudarQtd(this, -1)">-</button>' +
-                '<input type="number" inputmode="numeric" class="campo-qtd" min="0" step="1" value="' + (item.qtd || 0) + '" data-preco="' + (item.preco || 0) + '" oninput="atualizarTotais()">' +
-                '<button type="button" class="btn-qtd" aria-label="Aumentar" onclick="mudarQtd(this, 1)">+</button>' +
-              '</div>' +
-            '</td>' +
-            '<td class="col-preco">' + precoFmt + '</td>' +
-            '<td class="col-sub">' +
-              '<span class="sub-label-mobile">Subtotal</span>' +
-              '<span class="subtotal">R$ 0,00</span>' +
-            '</td>' +
-          '</tr>'
-        );
-      }).join("");
-
-      document.getElementById("lista-itens").innerHTML = linhasHtml;
-      atualizarTotais();
       document.getElementById("tela-carregando").style.display = "none";
       document.getElementById("app-pedido").style.display = "block";
     }
