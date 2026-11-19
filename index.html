@@ -301,6 +301,104 @@
       window.open(urlWhats, "_blank");
     }
 
+    function processarDadosPedido(p) {
+      if (!p || !Array.isArray(p.itens)) {
+        mostrarErro("Pedido não encontrado.");
+        return;
+      }
+
+      if (p.expiraEm && Date.now() > p.expiraEm) {
+        mostrarExpirado(p.cliente, p.expiraTexto);
+        return;
+      }
+
+      DADOS_ORIGINAIS = p;
+
+      const tituloPagina = p.titulo || "SUGESTÃO DE PEDIDO";
+      document.getElementById("titulo-topo").textContent = tituloPagina;
+      document.title = tituloPagina + " - " + (p.cliente || "");
+
+      document.getElementById("info-cliente").textContent = p.cliente || "";
+      document.getElementById("info-cnpj").textContent = p.cnpj || "";
+      document.getElementById("info-data").textContent = p.dataPedido || "";
+      document.getElementById("info-pag").textContent = p.formaPag || "";
+      document.getElementById("info-prazo").textContent = p.prazo || "";
+      document.getElementById("info-validade").textContent = p.expiraTexto ? ("Válido até " + p.expiraTexto) : "";
+
+      const temCategorias = p.itens.some(function (item) {
+        return item.grupo && String(item.grupo).trim() !== "";
+      });
+
+      const thPrimeira = document.getElementById("th-primeira-col");
+      if (temCategorias) {
+        thPrimeira.textContent = "CATEGORIA";
+        thPrimeira.className = "col-cat";
+      } else {
+        thPrimeira.textContent = "#";
+        thPrimeira.className = "col-num";
+      }
+
+      const linhasHtml = p.itens.map(function (item, idx) {
+        const precoFmt = formatarMoeda(item.preco);
+        const numItem = item.numero || (idx + 1);
+        const grupoAtual = String(item.grupo || "").trim();
+        const isNovoGrupo = temCategorias && (idx === 0 || grupoAtual !== String(p.itens[idx - 1].grupo || "").trim());
+
+        const fotoHtml = item.imagem
+          ? '<img src="' + item.imagem + '" alt="Produto" class="prod-img">'
+          : '<div class="sem-img">Sem foto</div>';
+
+        let celulaPrimeiraCol = "";
+        if (temCategorias) {
+          if (isNovoGrupo) {
+            let qtdLinhasGrupo = 1;
+            while (
+              idx + qtdLinhasGrupo < p.itens.length &&
+              String(p.itens[idx + qtdLinhasGrupo].grupo || "").trim() === grupoAtual
+            ) {
+              qtdLinhasGrupo++;
+            }
+            celulaPrimeiraCol = '<td class="col-cat" rowspan="' + qtdLinhasGrupo + '">' + escaparHtml(grupoAtual) + '</td>';
+          }
+        } else {
+          celulaPrimeiraCol = '<td class="col-num"><span class="badge-num">' + numItem + '</span></td>';
+        }
+
+        const badgeCategoriaMobile = temCategorias && grupoAtual
+          ? '<div class="badge-cat-mobile">' + escaparHtml(grupoAtual) + '</div>'
+          : '';
+
+        return (
+          '<tr class="' + (isNovoGrupo ? 'inicio-grupo' : '') + '">' +
+            celulaPrimeiraCol +
+            '<td class="col-foto">' + fotoHtml + '</td>' +
+            '<td class="col-prod">' +
+              badgeCategoriaMobile +
+              '<div class="prod-nome">' + escaparHtml(item.produto || item.descricao || "") + '</div>' +
+              '<div class="preco-mobile">Unitário: <strong>' + precoFmt + '</strong></div>' +
+            '</td>' +
+            '<td class="col-qtd">' +
+              '<div class="qtd-box">' +
+                '<button type="button" class="btn-qtd" aria-label="Diminuir" onclick="mudarQtd(this, -1)">-</button>' +
+                '<input type="number" inputmode="numeric" class="campo-qtd" min="0" step="1" value="' + (item.qtd || 0) + '" data-preco="' + (item.preco || 0) + '" oninput="atualizarTotais()">' +
+                '<button type="button" class="btn-qtd" aria-label="Aumentar" onclick="mudarQtd(this, 1)">+</button>' +
+              '</div>' +
+            '</td>' +
+            '<td class="col-preco">' + precoFmt + '</td>' +
+            '<td class="col-sub">' +
+              '<span class="sub-label-mobile">Subtotal</span>' +
+              '<span class="subtotal">R$ 0,00</span>' +
+            '</td>' +
+          '</tr>'
+        );
+      }).join("");
+
+      document.getElementById("lista-itens").innerHTML = linhasHtml;
+      atualizarTotais();
+      document.getElementById("tela-carregando").style.display = "none";
+      document.getElementById("app-pedido").style.display = "block";
+    }
+
     function iniciar() {
       if (!FILE_ID) {
         mostrarErro("Link inválido ou incompleto. Solicite um novo link ao vendedor.");
@@ -310,89 +408,29 @@
       fetch(API_APPS_SCRIPT + "?id=" + encodeURIComponent(FILE_ID))
         .then(function (resp) { return resp.json(); })
         .then(function (res) {
-          if (!res.ok) {
-            if (res.expirado) {
-              mostrarExpirado(res.cliente, res.expiraTexto);
-            } else {
-              mostrarErro(res.erro || "Pedido não encontrado.");
-            }
+          if (res && res.ok && res.pedido) {
+            processarDadosPedido(res.pedido);
             return;
           }
-
-          const p = res.pedido;
-          DADOS_ORIGINAIS = p;
-
-          const tituloPagina = p.titulo || "SUGESTÃO DE PEDIDO";
-          document.getElementById("titulo-topo").textContent = tituloPagina;
-          document.title = tituloPagina + " - " + p.cliente;
-
-          document.getElementById("info-cliente").textContent = p.cliente;
-          document.getElementById("info-cnpj").textContent = p.cnpj;
-          document.getElementById("info-data").textContent = p.dataPedido;
-          document.getElementById("info-pag").textContent = p.formaPag;
-          document.getElementById("info-prazo").textContent = p.prazo;
-          document.getElementById("info-validade").textContent = "Válido até " + p.expiraTexto;
-
-          const temCategorias = p.itens.some(function (item) {
-            return item.grupo && String(item.grupo).trim() !== "";
-          });
-
-          const thPrimeira = document.getElementById("th-primeira-col");
-          if (temCategorias) {
-            thPrimeira.textContent = "CATEGORIA";
-            thPrimeira.className = "col-cat";
-          } else {
-            thPrimeira.textContent = "#";
-            thPrimeira.className = "col-num";
+          if (res && res.expirado) {
+            mostrarExpirado(res.cliente, res.expiraTexto);
+            return;
           }
+          return fetch("https://drive.usercontent.google.com/download?id=" + encodeURIComponent(FILE_ID) + "&export=download")
+            .then(function (r) {
+              if (!r.ok) throw new Error("Falha ao baixar arquivo");
+              return r.json();
+            })
+            .then(function (jsonDireto) {
+              processarDadosPedido(jsonDireto);
+            });
+        })
+        .catch(function () {
+          mostrarErro("Não foi possível carregar o pedido. Verifique sua conexão e tente novamente.");
+        });
+    }
 
-          const linhasHtml = p.itens.map(function (item, idx) {
-            const precoFmt = formatarMoeda(item.preco);
-            const numItem = item.numero || (idx + 1);
-            const grupoAtual = String(item.grupo || "").trim();
-            const isNovoGrupo = temCategorias && (idx === 0 || grupoAtual !== String(p.itens[idx - 1].grupo || "").trim());
-
-            const fotoHtml = item.imagem
-              ? '<img src="' + item.imagem + '" alt="Produto" class="prod-img">'
-              : '<div class="sem-img">Sem foto</div>';
-
-            let celulaPrimeiraCol = "";
-            if (temCategorias) {
-              if (isNovoGrupo) {
-                let qtdLinhasGrupo = 1;
-                while (
-                  idx + qtdLinhasGrupo < p.itens.length &&
-                  String(p.itens[idx + qtdLinhasGrupo].grupo || "").trim() === grupoAtual
-                ) {
-                  qtdLinhasGrupo++;
-                }
-                celulaPrimeiraCol = '<td class="col-cat" rowspan="' + qtdLinhasGrupo + '">' + escaparHtml(grupoAtual) + '</td>';
-              }
-            } else {
-              celulaPrimeiraCol = '<td class="col-num"><span class="badge-num">' + numItem + '</span></td>';
-            }
-
-            const badgeCategoriaMobile = temCategorias && grupoAtual
-              ? '<div class="badge-cat-mobile">' + escaparHtml(grupoAtual) + '</div>'
-              : '';
-
-            return (
-              '<tr class="' + (isNovoGrupo ? 'inicio-grupo' : '') + '">' +
-                celulaPrimeiraCol +
-                '<td class="col-foto">' + fotoHtml + '</td>' +
-                '<td class="col-prod">' +
-                  badgeCategoriaMobile +
-                  '<div class="prod-nome">' + escaparHtml(item.produto) + '</div>' +
-                  '<div class="preco-mobile">Unitário: <strong>' + precoFmt + '</strong></div>' +
-                '</td>' +
-                '<td class="col-qtd">' +
-                  '<div class="qtd-box">' +
-                    '<button type="button" class="btn-qtd" aria-label="Diminuir" onclick="mudarQtd(this, -1)">-</button>' +
-                    '<input type="number" inputmode="numeric" class="campo-qtd" min="0" step="1" value="' + item.qtd + '" data-preco="' + item.preco + '" oninput="atualizarTotais()">' +
-                    '<button type="button" class="btn-qtd" aria-label="Aumentar" onclick="mudarQtd(this, 1)">+</button>' +
-                  '</div>' +
-                '</td>' +
-                '<td class="col-preco">' + precoFmt + '</td>' +
-                '<td class="col-sub">' +
-                  '<span class="sub-label-mobile">Subtotal</span>' +
-                  '<span class
+    iniciar();
+  </script>
+</body>
+</html>
