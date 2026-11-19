@@ -21,6 +21,23 @@
     th { background: #1b365d; color: #ffffff; padding: 11px 8px; text-align: left; font-size: 12px; letter-spacing: 0.4px; }
     td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
     .col-num { text-align: center; width: 42px; }
+    .col-cat {
+      background: #eff6ff;
+      color: #1b365d;
+      font-weight: bold;
+      font-size: 11.5px;
+      text-align: center;
+      vertical-align: middle;
+      border-right: 1px solid #cbd5e1;
+      border-bottom: 1px solid #cbd5e1;
+      padding: 8px 6px;
+      width: 118px;
+      min-width: 96px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    tr.inicio-grupo td { border-top: 2px solid #94a3b8; }
+    .badge-cat-mobile { display: none; }
     .col-foto { text-align: center; width: 68px; }
     .col-qtd { text-align: center; width: 136px; }
     .col-preco { text-align: right; white-space: nowrap; width: 100px; }
@@ -73,9 +90,12 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
       }
       tbody tr:last-child { margin-bottom: 0; }
+      tr.inicio-grupo td { border-top: none; }
       td { display: block; padding: 0; border: none; width: auto !important; }
+      .col-cat { display: none; }
       .col-num { grid-area: num; align-self: start; text-align: right; }
       .badge-num { display: inline-block; background: #e2e8f0; color: #1b365d; font-size: 11px; font-weight: bold; padding: 2px 7px; border-radius: 10px; }
+      .badge-cat-mobile { display: inline-block; background: #dbeafe; color: #1b365d; font-size: 10.5px; font-weight: bold; padding: 2px 7px; border-radius: 6px; margin-bottom: 4px; text-transform: uppercase; }
       .col-foto { grid-area: foto; text-align: center; }
       .prod-img, .sem-img { width: 66px; height: 66px; }
       .col-prod { grid-area: prod; text-align: left; }
@@ -98,14 +118,14 @@
 <body>
   <div id="tela-carregando" class="tela-estado">
     <div class="spinner"></div>
-    <strong>Carregando sugestão de pedido...</strong>
+    <strong id="texto-carregando">Carregando pedido...</strong>
   </div>
 
   <div id="tela-erro" class="tela-estado" style="display:none;"></div>
 
   <div id="app-pedido" class="container" style="display:none;">
     <div class="topo">
-      <h1>SUGESTÃO DE PEDIDO</h1>
+      <h1 id="titulo-topo">SUGESTÃO DE PEDIDO</h1>
       <p>Ajuste as quantidades abaixo e finalize seu pedido.</p>
     </div>
     <div class="cabecalho">
@@ -123,7 +143,7 @@
       <table>
         <thead>
           <tr>
-            <th class="col-num">#</th>
+            <th id="th-primeira-col" class="col-num">#</th>
             <th class="col-foto">FOTO</th>
             <th>PRODUTO / DESCRIÇÃO</th>
             <th class="col-qtd">QTD</th>
@@ -171,7 +191,7 @@
       box.innerHTML =
         '<div style="font-size:40px;margin-bottom:10px;">&#9203;</div>' +
         '<h2>Link de Orçamento Expirado</h2>' +
-        '<p style="color:#475569;font-size:14px;line-height:1.5;">Olá, <strong>' + escaparHtml(cliente || "Cliente") + '</strong>. Este link de sugestão de pedido tinha validade de <strong>24 horas</strong> para garantir preços atualizados.</p>' +
+        '<p style="color:#475569;font-size:14px;line-height:1.5;">Olá, <strong>' + escaparHtml(cliente || "Cliente") + '</strong>. Este link de pedido tinha validade de <strong>24 horas</strong> para garantir preços atualizados.</p>' +
         '<div class="detalhe-exp">Expirou em: ' + escaparHtml(expiraTexto) + '</div>' +
         '<p style="color:#475569;font-size:13px;">Por favor, solicite um novo link atualizado ao seu vendedor.</p>';
       box.style.display = "block";
@@ -301,7 +321,11 @@
 
           const p = res.pedido;
           DADOS_ORIGINAIS = p;
-          document.title = "Sugestão de Pedido - " + p.cliente;
+
+          const tituloPagina = p.titulo || "SUGESTÃO DE PEDIDO";
+          document.getElementById("titulo-topo").textContent = tituloPagina;
+          document.title = tituloPagina + " - " + p.cliente;
+
           document.getElementById("info-cliente").textContent = p.cliente;
           document.getElementById("info-cnpj").textContent = p.cnpj;
           document.getElementById("info-data").textContent = p.dataPedido;
@@ -309,18 +333,55 @@
           document.getElementById("info-prazo").textContent = p.prazo;
           document.getElementById("info-validade").textContent = "Válido até " + p.expiraTexto;
 
+          const temCategorias = p.itens.some(function (item) {
+            return item.grupo && String(item.grupo).trim() !== "";
+          });
+
+          const thPrimeira = document.getElementById("th-primeira-col");
+          if (temCategorias) {
+            thPrimeira.textContent = "CATEGORIA";
+            thPrimeira.className = "col-cat";
+          } else {
+            thPrimeira.textContent = "#";
+            thPrimeira.className = "col-num";
+          }
+
           const linhasHtml = p.itens.map(function (item, idx) {
             const precoFmt = formatarMoeda(item.preco);
             const numItem = item.numero || (idx + 1);
+            const grupoAtual = String(item.grupo || "").trim();
+            const isNovoGrupo = temCategorias && (idx === 0 || grupoAtual !== String(p.itens[idx - 1].grupo || "").trim());
+
             const fotoHtml = item.imagem
               ? '<img src="' + item.imagem + '" alt="Produto" class="prod-img">'
               : '<div class="sem-img">Sem foto</div>';
 
+            let celulaPrimeiraCol = "";
+            if (temCategorias) {
+              if (isNovoGrupo) {
+                let qtdLinhasGrupo = 1;
+                while (
+                  idx + qtdLinhasGrupo < p.itens.length &&
+                  String(p.itens[idx + qtdLinhasGrupo].grupo || "").trim() === grupoAtual
+                ) {
+                  qtdLinhasGrupo++;
+                }
+                celulaPrimeiraCol = '<td class="col-cat" rowspan="' + qtdLinhasGrupo + '">' + escaparHtml(grupoAtual) + '</td>';
+              }
+            } else {
+              celulaPrimeiraCol = '<td class="col-num"><span class="badge-num">' + numItem + '</span></td>';
+            }
+
+            const badgeCategoriaMobile = temCategorias && grupoAtual
+              ? '<div class="badge-cat-mobile">' + escaparHtml(grupoAtual) + '</div>'
+              : '';
+
             return (
-              '<tr>' +
-                '<td class="col-num"><span class="badge-num">' + numItem + '</span></td>' +
+              '<tr class="' + (isNovoGrupo ? 'inicio-grupo' : '') + '">' +
+                celulaPrimeiraCol +
                 '<td class="col-foto">' + fotoHtml + '</td>' +
                 '<td class="col-prod">' +
+                  badgeCategoriaMobile +
                   '<div class="prod-nome">' + escaparHtml(item.produto) + '</div>' +
                   '<div class="preco-mobile">Unitário: <strong>' + precoFmt + '</strong></div>' +
                 '</td>' +
@@ -334,23 +395,4 @@
                 '<td class="col-preco">' + precoFmt + '</td>' +
                 '<td class="col-sub">' +
                   '<span class="sub-label-mobile">Subtotal</span>' +
-                  '<span class="subtotal">R$ 0,00</span>' +
-                '</td>' +
-              '</tr>'
-            );
-          }).join("");
-
-          document.getElementById("lista-itens").innerHTML = linhasHtml;
-          atualizarTotais();
-          document.getElementById("tela-carregando").style.display = "none";
-          document.getElementById("app-pedido").style.display = "block";
-        })
-        .catch(function () {
-          mostrarErro("Não foi possível carregar o pedido. Verifique sua conexão e tente novamente.");
-        });
-    }
-
-    iniciar();
-  </script>
-</body>
-</html>
+                  '<span class
